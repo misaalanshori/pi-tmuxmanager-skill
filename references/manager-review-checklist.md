@@ -5,6 +5,19 @@ because the gates are green and a comment is posted. The review is where
 gaps and smells get caught — do this AFTER every worker cycle, before any
 issue comment/close.
 
+## Contents
+
+- **The review, in order**
+- **Worker health & supervisor discipline (every boundary)**
+- **Lessons so far**
+  - 2026-10-22 flaky ledger: `e2e_tree_layout` under load
+  - 2026-10-25 flaky ledger: the macOS legs are unstable on `main` itself (PTY + shell rows)
+  - 2026-10-24 flaky ledger (load-only, mechanism understood): `pty_read_waits_and_drains::a_silent_pty_does_not_busy_spin`
+  - Every hang-prone command gets a timeout (owner, 2026-10-23)
+  - Three tells a worker is wedged, and the one I ignored (owner, 2026-10-23)
+- **The design mandate (owner, 2026-10-04 — governs every brief)**
+- **Pi-parity phase law (owner, 2026-10-05)**
+
 ## The review, in order
 
 1. **Read every hunk of the cycle's diff** — not the stat, not the commit

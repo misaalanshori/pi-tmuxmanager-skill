@@ -1,7 +1,12 @@
 # Manager session notes — project log (out of tree)
 
 Running log of standing instructions, owner directives, and findings for this
-management session. Append-only. Read this at the start of every cycle.
+management session. Append-only. Read the newest sections at the start of
+every cycle.
+
+**Finding things:** ~150 dated section headings. Jump to one with
+`grep -n '^## ' references/manager-session-notes.md` instead of reading the
+whole log; the older cycles are history, not instructions.
 
 ---
 

@@ -44,11 +44,11 @@ You do not write feature code directly; instead, you manage, brief, dispatch, su
 
 Before touching any issues or dispatching work, build your complete mental model of the project and verify the worker plane:
 
-1. **Read All Out-of-Tree Playbooks & Scripts (`../`)**:
-* Read the Markdown playbooks `../manager-cycle-playbook.md`, `../manager-review-checklist.md`, `../tmux-subagent-playbook.md`, `../worker-manager-plan.md`, and `../dev-cycle-prompt.md`.
+1. **Read All Out-of-Tree Playbooks & Scripts** (paths relative to the skill directory, the one holding `SKILL.md`):
+* Read the Markdown playbooks `references/manager-cycle-playbook.md`, `references/manager-review-checklist.md`, `references/tmux-subagent-playbook.md`, `references/worker-manager-plan.md`, and `references/dev-cycle-prompt.md`.
 
 
-* Inspect `../worker-dispatch-prompt.md.tpl` (the Markdown dispatch template), `../worker-wait.sh` (the Bash supervisor script), and `../worker-log.sh` (the Bash JSONL log tailer).
+* Inspect `assets/worker-dispatch-prompt.md.tpl` (the Markdown dispatch template), `scripts/worker-wait.sh` (the Bash supervisor script), and `scripts/worker-log.sh` (the Bash JSONL log tailer).
 
 
 * Inspect reference repositories in `~/gits/` as needed for upstream specifications and patterns.
@@ -81,14 +81,14 @@ tmux -L $TMUX_SOCKET list-panes -t $TMUX_SESSION -F '#{pane_id} #{pane_current_c
 ```
 
 
-* If the session does not exist or `pi` is not running, initialize it per `../worker-manager-plan.md`:
+* If the session does not exist or `pi` is not running, initialize it per `references/worker-manager-plan.md`:
 ```bash
 tmux -L $TMUX_SOCKET new-session -d -s $TMUX_SESSION -c /path/to/repo 'bash --norc'
 tmux -L $TMUX_SOCKET send-keys -t $TMUX_SESSION 'pi --model opendesign/deepseek-v4.1-flash --models "antigravity/gemini-3.8-flash,opendesign/deepseek-v4.1-flash,opendesign/mimo-v2.6-flash"' Enter
 ```
 
 
-* If starting a fresh worker session (not resuming via `--continue` / `--session <uuid>`), prime the worker with the two mandatory priming prompts in order, waiting via `../worker-wait.sh` for idle between them:
+* If starting a fresh worker session (not resuming via `--continue` / `--session <uuid>`), prime the worker with the two mandatory priming prompts in order, waiting via `scripts/worker-wait.sh` for idle between them:
 
 1. `"Read the README and the ./docs, no need to read the code yet. just explain to me as if im a minimally-technical stakeholder"`
 
@@ -112,7 +112,7 @@ At the start of every cycle, query the live remote state (never rely on cached l
 gh issue list --state open --limit 200 --json number,title,labels,author,updatedAt,milestone,assignees,body
 ```
 
-Always include `labels`, `author`, `updatedAt`, and `title` as mandated in `../manager-cycle-playbook.md` and `../manager-review-checklist.md`.
+Always include `labels`, `author`, `updatedAt`, and `title` as mandated in `references/manager-cycle-playbook.md` and `references/manager-review-checklist.md`.
 
 
 2. **Filter & Reconcile**:
@@ -207,7 +207,7 @@ Write a comprehensive, self-contained Markdown brief out-of-tree (e.g., `/home/d
 * **Decided Architecture & Design**: Exact data structures, state transitions, trait signatures, and interfaces to implement, plus alternatives explicitly rejected and why.
 
 
-* **Phased Execution Plan**: Ordered phases following `../dev-cycle-prompt.md` (1. Read spec $\rightarrow$ 2. Write failing test first (strict TDD) $\rightarrow$ 3. Implement minimal boring code $\rightarrow$ 4. Run all gates $\rightarrow$ 5. Commit small & push per phase $\rightarrow$ 6. Verify against test suite $\rightarrow$ 7. Update status/report).
+* **Phased Execution Plan**: Ordered phases following `references/dev-cycle-prompt.md` (1. Read spec $\rightarrow$ 2. Write failing test first (strict TDD) $\rightarrow$ 3. Implement minimal boring code $\rightarrow$ 4. Run all gates $\rightarrow$ 5. Commit small & push per phase $\rightarrow$ 6. Verify against test suite $\rightarrow$ 7. Update status/report).
 
 
 * **Test Policy & Strict TDD**: Specify exact unit, integration, and property tests to add. TDD is strictly enforced: write failing tests first. Existing tests must pin observable behavior, never internal implementation shape. Enforce the cardinal rule: **test our own logic, not the runtime or external dependencies**. Tests must verify our business rules, data transformations, and state transitions, isolating external runtimes and provider APIs with mocks/fixtures.
@@ -242,10 +242,10 @@ Post a brief design and scope note on the target issue(s) via `gh issue comment 
 
 ## Step 5: Dispatch & Active Supervision Loop
 
-Deliver the brief to the worker using `../worker-dispatch-prompt.md.tpl`:
+Deliver the brief to the worker using `assets/worker-dispatch-prompt.md.tpl`:
 
 1. **Dispatch the Prompt**:
-* Generate the dispatch text by substituting `${prompt_path}` and the fresh `${done_channel}` into `../worker-dispatch-prompt.md.tpl`.
+* Generate the dispatch text by substituting `${prompt_path}` and the fresh `${done_channel}` into `assets/worker-dispatch-prompt.md.tpl`.
 
 
 * Load and paste it into the worker pane using bracketed paste (`-p`), then submit with `Enter`:
@@ -263,7 +263,7 @@ tmux -L $TMUX_SOCKET send-keys -t $TMUX_SESSION Enter
 * Wait ~45–60 seconds after submitting, then inspect both the pane and the JSONL session log to confirm the worker transitioned to `● Working` and is reading the brief and issue comments properly:
 ```bash
 tmux -L $TMUX_SOCKET capture-pane -p -t $TMUX_SESSION | tail -n 25
-../worker-log.sh -n 25 <worker-session-uuid>
+scripts/worker-log.sh -n 25 <worker-session-uuid>
 ```
 
 
@@ -277,12 +277,12 @@ While the worker executes its phases, observe progress via `worker-log.sh`. You 
 
 
 
-### Step 5.3: Blocking Wait via `../worker-wait.sh` (Zero Polling!)
+### Step 5.3: Blocking Wait via `scripts/worker-wait.sh` (Zero Polling!)
 
 Once the worker is running, enter a single blocking wait for 40–60 minutes (`2400`–`3600` seconds)—**never poll in a loop yourself**:
 
 ```bash
-../worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel "${done_channel}" --idle-secs 120 --max-secs 3600
+scripts/worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel "${done_channel}" --idle-secs 120 --max-secs 3600
 ```
 
 * **ABSOLUTELY NO POLLING**: Do not issue repeated `capture-pane`, `status`, or `log` commands while the worker is working. You MUST make this single blocking call and sleep inside it. The supervisor script is your sentinel.
@@ -292,14 +292,14 @@ Once the worker is running, enter a single blocking wait for 40–60 minutes (`2
 
 ### Step 5.4: Inspect Logs, Evaluate Exit Code & Steer or Loop
 
-At **EVERY** return from `../worker-wait.sh` (regardless of exit code), immediately run a deep log tail and git check:
+At **EVERY** return from `scripts/worker-wait.sh` (regardless of exit code), immediately run a deep log tail and git check:
 
 ```bash
-../worker-log.sh -n 50 <worker-session-uuid>
+scripts/worker-log.sh -n 50 <worker-session-uuid>
 git status -s && git log --oneline -n 5
 ```
 
-Act on the `../worker-wait.sh` exit code (`$?`) and log analysis:
+Act on the `scripts/worker-wait.sh` exit code (`$?`) and log analysis:
 
 * **`rc = 0` (Signal Received — Cycle Complete)**: Proceed to **Step 6**.
 
@@ -310,7 +310,7 @@ Act on the `../worker-wait.sh` exit code (`$?`) and log analysis:
 
 
 * **`rc = 2` (Deadline Elapsed)**:
-* Review the `../worker-log.sh -n 50` output. If the worker is making steady, aligned progress, jump back to **Step 5.1 / 5.3** (reusing the SAME `${done_channel}`).
+* Review the `scripts/worker-log.sh -n 50` output. If the worker is making steady, aligned progress, jump back to **Step 5.1 / 5.3** (reusing the SAME `${done_channel}`).
 * If the worker is drifting off-spec, chasing phantoms, or violating constraints, send a corrective steering prompt and jump back to **Step 5 / 5.1**.
 
 
@@ -328,7 +328,7 @@ Act on the `../worker-wait.sh` exit code (`$?`) and log analysis:
 
 ## Step 6: Post-Cycle Deep-Dive Review & Verification
 
-A cycle is **never** done just because the worker signaled completion and claimed green gates. Execute the full audit from `../manager-review-checklist.md`:
+A cycle is **never** done just because the worker signaled completion and claimed green gates. Execute the full audit from `references/manager-review-checklist.md`:
 
 1. **Read Every Hunk of Every Commit**:
 * Run `git log <base>..HEAD` and `git show <commit>` for every commit in the cycle. Read 100% of the diff file-by-file—never skim `--stat` or read only the head of a file.

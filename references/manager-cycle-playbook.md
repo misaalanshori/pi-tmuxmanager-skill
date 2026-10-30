@@ -4,6 +4,28 @@ The companion to `manager-review-checklist.md` (which covers WHAT to
 check): this covers HOW a cycle moves. Written 2026-10-06 from ~40
 cycles of scar tissue.
 
+## Contents
+
+- **Topology (fixed)**
+- **The cycle (every dispatch, in order)**
+- **Standing mechanics**
+  - Before any wait: confirm both workers are actually working (owner, 2026-10-22)
+  - Re-dispatch is part of the merge, not after it (owner correction, 2026-10-21)
+  - Every hang-prone command gets a timeout (owner, 2026-10-23)
+  - Verify every path in a brief against the tree before dispatching (manager, 2026-10-24)
+  - Three tells a worker is wedged, and the one I ignored (owner, 2026-10-23)
+- **Prioritization law (owner, restated 2026-10-21 — read this before any dispatch)**
+- **Dual-worker topology (owner directive, 2026-10-20 — supersedes single-worker §above)**
+  - Storage monitoring (owner escalation, 2026-10-20 — two worktrees crashed the machine)
+  - Manager gate runs must not overlap a worker build (2026-10-20, dual-worker)
+  - Root cause of the disk crisis, fixed in the profiles (2026-10-20)
+  - Pricing-window scheduling — **IGNORED** (owner, 2026-10-21)
+  - A byte-comparison gate is not a portable gate (2026-10-21, #427)
+  - Provider failure: retry first, switch only if it stays down (owner, 2026-10-21)
+  - Worker session recycling, with a helper that lied (2026-10-21)
+  - Three-worktree topology + "manager owns main" (owner, 2026-10-21)
+  - Sending a slash command while a worker is mid-turn (2026-10-21)
+
 ## Topology (fixed)
 
 - Manager: a pi session. Worker: pi in `tmux -L $TMUX_SOCKET`, session
@@ -340,7 +362,7 @@ next dispatch (never work off a stale base).
 
 **Supervision.** Worker-specific completion channels:
 `worker-done-w1-<cycle>` / `worker-done-w2-<cycle>` (fix-ups get a fresh
-`...fix` channel). `../worker-wait-both.sh` is the single blocking wait over
+`...fix` channel). `scripts/worker-wait-both.sh` is the single blocking wait over
 both channels (returns when EITHER worker signals/idsles/crashes/deadlines;
 rc carries which one). Re-waits reuse the same channel per still-running
 worker. At every return, `worker-log.sh -n 40` BOTH uuids.
@@ -356,9 +378,9 @@ Two workers × 50-70 GB `target/` + a gate run filled the 394 GB disk to 100%
 mid-cycle; suites died without summaries and every downstream thing fell
 apart. Monitoring at wait-returns alone was not enough. The binding rules:
 
-1. **`../disk-guard.sh` is a PREFLIGHT, not a report.** Before every dispatch,
+1. **`scripts/disk-guard.sh` is a PREFLIGHT, not a report.** Before every dispatch,
    every merge/rebase, and every gate run:
-   `../disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --check || { ../disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --clean-idle; ... }`.
+   `scripts/disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --check || { scripts/disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --clean-idle; ... }`.
    It exits 1 on pressure (free < 40 GB, or combined `target/` > 60 GB).
 2. **`worker-wait-both.sh` runs it on every return** (`--clean-idle`): it
    prints free space + both `target/` sizes, and prunes the larger idle

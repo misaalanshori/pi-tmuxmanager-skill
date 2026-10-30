@@ -1,6 +1,6 @@
 Alright, running a single sequential worker is not using our token and rate limits efficiently, so we are upgrading our topology to **two parallel worker agents** operating in separate Git worktrees. Your job is now to set up, prime, dispatch, supervise, review, and merge both workers concurrently while keeping merge conflicts to a minimum by partitioning their tasks across orthogonal parts of the codebase.
 
-Execute the following steps immediately and record this new dual-worker protocol in our out-of-tree notes (`../manager-cycle-playbook.md`, `../worker-manager-plan.md`, and `../tmux-subagent-playbook.md`) for future reference:
+Execute the following steps immediately and record this new dual-worker protocol in our out-of-tree notes (`references/manager-cycle-playbook.md`, `references/worker-manager-plan.md`, and `references/tmux-subagent-playbook.md`) for future reference:
 
 #### 1. Provision the Second Worktree & Tmux Worker Session (`worker-2`)
 
@@ -22,7 +22,7 @@ Verify the footer in the pane to confirm the model loaded properly.
 2. `"okay now read and analyze the actual code, just to get your bearings"`
 
 
-* **Session UUID Registration**: Once `worker-2` completes its first turn and writes its session file, run `ls -t ~/.pi/agent/sessions/*/*.jsonl` to grab and record `worker-2`'s unique session UUID alongside `worker-1`'s UUID so you never mix up Worker 1, Worker 2, or your own Manager session when tailing logs with `../worker-log.sh`.
+* **Session UUID Registration**: Once `worker-2` completes its first turn and writes its session file, run `ls -t ~/.pi/agent/sessions/*/*.jsonl` to grab and record `worker-2`'s unique session UUID alongside `worker-1`'s UUID so you never mix up Worker 1, Worker 2, or your own Manager session when tailing logs with `scripts/worker-log.sh`.
 
 
 
@@ -42,17 +42,17 @@ Verify the footer in the pane to confirm the model loaded properly.
 
 #### 3. Parallel Dispatch & Dual-Worker Supervision
 
-* **Distinct Completion Channels**: When rendering `../worker-dispatch-prompt.md.tpl` for each worker, assign worker-specific completion channels (`worker-done-w1-<cycle>` for `worker-1` and `worker-done-w2-<cycle>` for `worker-2`). Tell `worker-2` to run `tmux -L $TMUX_SOCKET wait-for -S worker-done-w2-<cycle>` upon completion.
+* **Distinct Completion Channels**: When rendering `assets/worker-dispatch-prompt.md.tpl` for each worker, assign worker-specific completion channels (`worker-done-w1-<cycle>` for `worker-1` and `worker-done-w2-<cycle>` for `worker-2`). Tell `worker-2` to run `tmux -L $TMUX_SOCKET wait-for -S worker-done-w2-<cycle>` upon completion.
 
 
-* **Verify Both Starts**: After pasting each dispatch via `tmux -L $TMUX_SOCKET load-buffer` + `paste-buffer -p` + `Enter`, check both panes after ~45–60 seconds and run `../worker-log.sh -n 25 <uuid-w1>` and `../worker-log.sh -n 25 <uuid-w2>` to confirm both workers are `● Working` and aligned.
+* **Verify Both Starts**: After pasting each dispatch via `tmux -L $TMUX_SOCKET load-buffer` + `paste-buffer -p` + `Enter`, check both panes after ~45–60 seconds and run `scripts/worker-log.sh -n 25 <uuid-w1>` and `scripts/worker-log.sh -n 25 <uuid-w2>` to confirm both workers are `● Working` and aligned.
 
 
-* **Dual-Worker Blocking Wait**: Run `../worker-wait-both.sh --socket "$TMUX_SOCKET" --s1 worker-1 --s2 worker-2 --ch1 worker-done-w1-<cycle> --ch2 worker-done-w2-<cycle> --wt1 "$WT1" --wt2 "$WT2"` so that a single blocking invocation watches **both** `worker-1` (`--ch1 worker-done-w1-<cycle>`) and `worker-2` (`--ch2 worker-done-w2-<cycle>`) on `tmux -L $TMUX_SOCKET` and returns as soon as **either** worker signals completion (`rc 0`), goes idle for 120s (`rc 1`), crashes (`rc 3`), or hits the deadline (`rc 2`). Remember to reuse the exact same channel name whenever re-waiting on a still-running worker within the same cycle.
+* **Dual-Worker Blocking Wait**: Run `scripts/worker-wait-both.sh --socket "$TMUX_SOCKET" --s1 worker-1 --s2 worker-2 --ch1 worker-done-w1-<cycle> --ch2 worker-done-w2-<cycle> --wt1 "$WT1" --wt2 "$WT2"` so that a single blocking invocation watches **both** `worker-1` (`--ch1 worker-done-w1-<cycle>`) and `worker-2` (`--ch2 worker-done-w2-<cycle>`) on `tmux -L $TMUX_SOCKET` and returns as soon as **either** worker signals completion (`rc 0`), goes idle for 120s (`rc 1`), crashes (`rc 3`), or hits the deadline (`rc 2`). Remember to reuse the exact same channel name whenever re-waiting on a still-running worker within the same cycle.
 
 
 * **Verification & Log Tailing**:
-* At every wait return, tail **both** session logs (`../worker-log.sh -n 40 <uuid-w1>` and `../worker-log.sh -n 40 <uuid-w2>`). If either worker is stuck or drifting, diagnose the code yourself and send a mechanism-level steering prompt to that specific worker.
+* At every wait return, tail **both** session logs (`scripts/worker-log.sh -n 40 <uuid-w1>` and `scripts/worker-log.sh -n 40 <uuid-w2>`). If either worker is stuck or drifting, diagnose the code yourself and send a mechanism-level steering prompt to that specific worker.
 * Run verification via cargo gates and integration tests independently to confirm ongoing test pass rates without relying on manual terminal drives.
 
 
@@ -76,7 +76,7 @@ Verify the footer in the pane to confirm the model loaded properly.
 
 #### 5. Save to Out-of-Tree Notes Immediately
 
-* Before starting the first dual dispatch, update `../manager-cycle-playbook.md`, `../worker-manager-plan.md`, and `../tmux-subagent-playbook.md` with:
+* Before starting the first dual dispatch, update `references/manager-cycle-playbook.md`, `references/worker-manager-plan.md`, and `references/tmux-subagent-playbook.md` with:
 1. The dual-worker topology (`worker-1` in primary checkout and `worker-2` in the secondary worktree on `tmux -L $TMUX_SOCKET`).
 2. Both workers' active session UUIDs and completion channel naming scheme.
 3. The orthogonal crate-partitioning rule and merge/rebase conflict-resolution protocol.
