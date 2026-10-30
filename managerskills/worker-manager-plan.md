@@ -7,14 +7,14 @@ This plan describes how the Manager Agent dispatches and supervises pi worker ag
 | Role | Where | Notes |
 |---|---|---|
 | manager (me) | this session | writes briefs, dispatches, sleeps in `worker-wait.sh`, reviews, merges |
-| Worker 1 | `tmux -L ${TMUX_SOCKET:-roller-mgr}`, session `worker-1`, cwd = primary or wt1 | pi interactive TUI |
-| Worker 2 | `tmux -L ${TMUX_SOCKET:-roller-mgr}`, session `worker-2`, cwd = wt2 | pi interactive TUI (dual-worker mode) |
+| Worker 1 | `tmux -L $TMUX_SOCKET`, session `worker-1`, cwd = primary or wt1 | pi interactive TUI |
+| Worker 2 | `tmux -L $TMUX_SOCKET`, session `worker-2`, cwd = wt2 | pi interactive TUI (dual-worker mode) |
 
-A dedicated, isolated socket (`${TMUX_SOCKET:-roller-mgr}`) is used for the management plane so that worker sessions never collide with any other tmux sessions on the machine.
+A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane so that worker sessions never collide with any other tmux sessions on the machine.
 
 ## 2. Setup protocol
 
-1. `tmux -L ${TMUX_SOCKET:-roller-mgr} new-session -d -s worker-1 -c /path/to/repo 'bash --norc'`
+1. `tmux -L $TMUX_SOCKET new-session -d -s worker-1 -c /path/to/repo 'bash --norc'`
 2. Start pi with the designated model:
    `pi --model antigravity/gemini-3.8-flash --models "antigravity/gemini-3.8-flash,opencode-go/mimo-v2.6-flash"`
    Verify the footer in the pane.
@@ -27,7 +27,7 @@ A dedicated, isolated socket (`${TMUX_SOCKET:-roller-mgr}`) is used for the mana
 
 1. **Brief**: Write the cycle's prompt file (e.g. `PROMPT-<ID>-<date>.md`) with full RCA, exact design, TDD requirements, and acceptance criteria.
 2. **Dispatch**: Substitute `${prompt_path}` and a fresh `${done_channel}` (e.g. `worker-done-1`) into `worker-dispatch-prompt.md.tpl`, and deliver it into the pane via `tmux load-buffer` + `paste-buffer -p`.
-3. **Supervise**: `./worker-wait.sh --channel worker-done-1 --max-secs 3600`
+3. **Supervise**: `./worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel worker-done-1 --max-secs 3600`
    — one blocking call; the manager sleeps inside it. **Re-waits within the same cycle MUST reuse the same channel**.
    Exit codes:
    | rc | meaning | manager action |
@@ -57,7 +57,7 @@ A dedicated, isolated socket (`${TMUX_SOCKET:-roller-mgr}`) is used for the mana
 ## 6. Dual-Worker Topology
 
 When running two concurrent workers:
-- **Topology**: Worker 1 (`worker-1`) in worktree 1; Worker 2 (`worker-2`) in worktree 2, both on `tmux -L ${TMUX_SOCKET:-roller-mgr}`.
+- **Topology**: Worker 1 (`worker-1`) in worktree 1; Worker 2 (`worker-2`) in worktree 2, both on `tmux -L $TMUX_SOCKET`.
 - **Priming**: Worker 2 gets the two mandatory priming prompts in order, exactly like Worker 1.
 - **Channels**: `worker-done-w1-<cycle>` / `worker-done-w2-<cycle>`; fix-ups `...fix`. `worker-wait-both.sh` blocks on both.
 - **Batch partition**: Orthogonal batches by crate / subsystem to minimize merge friction.

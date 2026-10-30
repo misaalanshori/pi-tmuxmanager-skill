@@ -1,4 +1,4 @@
-<!-- worker-dispatch-prompt.md.tpl — substitute ${prompt_path}, ${done_channel}, and optionally ${tmux_socket} per cycle -->
+<!-- worker-dispatch-prompt.md.tpl — substitute ${prompt_path}, ${done_channel}, and ${tmux_socket} per cycle (all required; the scripts have no defaults) -->
 Okay, so we have all the things we need you to do documented. We have done major planning, lets just get started immediately by reading this prompt in its entirety and referencing it throughout the session to ensure alignment: ${prompt_path} it contains all the starting info you need to know and need to do to finish this final goal. It also refers to our ./docs and project specifications.
 
 Like usual, ensure you work in phases, ensure each phase is clean and fully tested, then commit and push it, maybe check up on ci once in a while (we have gh cli setup). No need for my approval, ever, the plan is preapproved, go and execute it to completion, if you run into issues try to solve them yourself, any deviations must be documented at the end, but does not necessitate immediate confirmation with me. Ensure everything is documented well.
@@ -20,6 +20,6 @@ never terminate, so hitting the ceiling **is** the measurement.
 
 One last thing — the completion protocol: my supervisor process is blocked waiting for a signal from this tmux session. When you have FULLY completed the cycle (all phases done, all gates green, everything pushed, the report written to the path the prompt specifies), run exactly this command once:
 
-    tmux -L ${tmux_socket:-roller-mgr} wait-for -S ${done_channel}
+    tmux -L ${tmux_socket} wait-for -S ${done_channel}
 
 Then write your final summary in the pane as usual and stop. Do not run the signal early or speculatively — only when the cycle is genuinely complete. If you get blocked or need to hand back early, do NOT signal — just stop working and say so in the pane.

@@ -33,12 +33,39 @@
 
 set -u
 
-SOCK="${TMUX_SOCKET:-roller-mgr}"
-SESSION="${TMUX_SESSION:-worker-1}"
-CHANNEL=worker-done
+usage() {
+  cat <<'EOF'
+worker-wait.sh — blocking supervisor for a pi worker running under tmux.
+
+Usage: worker-wait.sh --socket SOCK --session NAME --channel CHAN [options]
+
+Required (a flag wins; the env var is the fallback; there are no baked defaults):
+  --socket SOCK     tmux socket of the management plane      (TMUX_SOCKET)
+  --session NAME    worker session on that socket            (TMUX_SESSION)
+  --channel CHAN    completion channel for this cycle        (none: fresh per cycle)
+
+Options:
+  --idle-secs N     silence before rc 1                      (default 120)
+  --max-secs N      total wait budget before rc 2            (default 3600)
+  --quiet           suppress the pane + disk report
+  --selftest        run the built-in supervisor tests
+  -h, --help        this help
+
+Tunables (env):
+  DISK_MIN_GB       free-space floor in GB, measured on DISK_PATH  (default 25)
+  DISK_PATH         filesystem to measure                          (default .)
+
+Exit: 0 signal | 1 idle | 2 deadline | 3 worker gone | 4 usage/setup | 5 disk
+EOF
+}
+
+SOCK="${TMUX_SOCKET:-}"
+SESSION="${TMUX_SESSION:-}"
+CHANNEL=""
 IDLE_SECS=120
 MAX_SECS=3600
 REPORT=1
+DISK_PATH="${DISK_PATH:-.}"   # filesystem to watch; default is "wherever I run"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -49,12 +76,13 @@ while [ $# -gt 0 ]; do
     --max-secs)  MAX_SECS=$2; shift 2 ;;
     --quiet)     REPORT=0; shift ;;
     --selftest)  SELFTEST=1; shift ;;
-    *) echo "unknown arg: $1" >&2; exit 4 ;;
+    -h|--help)   usage; exit 0 ;;
+    *) echo "worker-wait: unknown arg: $1" >&2; usage >&2; exit 4 ;;
   esac
 done
 
 selftest() {
-  local S="${SOCK}-selftest"
+  local S="${SOCK:-pi}-selftest"
   tmux -L "$S" kill-server 2>/dev/null
   local fail=0 t0 rc
   local NODE_SILENT='node -e "setInterval(()=>{},10000)"'
@@ -133,6 +161,16 @@ selftest() {
 
 [ "${SELFTEST:-0}" = 1 ] && selftest
 
+missing=""
+[ -n "$SOCK" ]    || missing="$missing --socket(or TMUX_SOCKET)"
+[ -n "$SESSION" ] || missing="$missing --session(or TMUX_SESSION)"
+[ -n "$CHANNEL" ] || missing="$missing --channel"
+if [ -n "$missing" ]; then
+  echo "worker-wait: missing required:$missing" >&2
+  usage >&2
+  exit 4
+fi
+
 pane=$(tmux -L "$SOCK" list-panes -t "$SESSION" -F '#{pane_id}' 2>/dev/null | head -1)
 [ -n "${pane:-}" ] || { echo "worker-wait: no session '$SESSION' on socket '$SOCK'" >&2; exit 4; }
 
@@ -179,7 +217,7 @@ j1=$!
     # request: two worktrees filled the disk to 100% and killed every worker
     # mid-cycle while the manager slept in a 90-minute wait). Free-space only,
     # deliberately: `du -sG` on a 60 GB target every 5 s would itself cost.
-    free_gb=$(df -BG --output=avail /home/debian 2>/dev/null | tail -1 | tr -dc '0-9')
+    free_gb=$(df -BG --output=avail "$DISK_PATH" 2>/dev/null | tail -1 | tr -dc '0-9')
     [ -n "$free_gb" ] && [ "$free_gb" -lt "${DISK_MIN_GB:-25}" ] && \
       { echo "disk(${free_gb}GB)" > "$tmp/reason"; exit 0; }
     [ "$now" -ge "$deadline" ] && { echo deadline > "$tmp/reason"; exit 0; }
@@ -208,7 +246,7 @@ if [ "$REPORT" = 1 ]; then
   echo "-- pane tail --"
   tmux -L "$SOCK" capture-pane -p -t "$pane" 2>/dev/null | grep -v '^$' | tail -n 12
   echo "-- disk --"
-  df -h /home/debian | tail -1
+  df -h "$DISK_PATH" | tail -1
   for t in target */target ../*/target; do
     [ -d "$t" ] && du -sh "$t" 2>/dev/null
   done

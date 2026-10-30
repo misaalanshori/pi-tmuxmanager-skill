@@ -6,7 +6,7 @@ cycles of scar tissue.
 
 ## Topology (fixed)
 
-- Manager: a pi session. Worker: pi in `tmux -L ${TMUX_SOCKET:-roller-mgr}`, session
+- Manager: a pi session. Worker: pi in `tmux -L $TMUX_SOCKET`, session
   `worker-1`, cwd = the repo. Separate socket so the management plane never
   collides with other sessions. NEVER the default socket (shared machine).
 - Worker model + thinking are owner-set; record both at setup. A model
@@ -38,7 +38,7 @@ cycles of scar tissue.
 5. **Dispatch**: short message referencing the brief + `load-buffer` +
    `paste-buffer -p` for long text (`-p` = real bracketed paste) +
    Enter. Confirm `● Working` within a minute.
-6. **Supervise** with `worker-wait.sh --channel <chan>`: ONE blocking
+6. **Supervise** with `worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel <chan>`: ONE blocking
    call per wait (the agent never polls; the script may). Exit codes:
    0 = signal (review), 1 = idle without signal (peek: stuck or a
    question), 2 = deadline (~1h — peek, judge, re-wait SAME channel),
@@ -306,7 +306,7 @@ docs/CI publishing task) is correctly sitting below all of them.
 
 ## Dual-worker topology (owner directive, 2026-10-20 — supersedes single-worker §above)
 
-Two workers run concurrently on `tmux -L ${TMUX_SOCKET:-roller-mgr}`, in separate Git worktrees:
+Two workers run concurrently on `tmux -L $TMUX_SOCKET`, in separate Git worktrees:
 
 | role | tmux session | worktree | branch |
 |---|---|---|---|
@@ -358,7 +358,7 @@ apart. Monitoring at wait-returns alone was not enough. The binding rules:
 
 1. **`../disk-guard.sh` is a PREFLIGHT, not a report.** Before every dispatch,
    every merge/rebase, and every gate run:
-   `../disk-guard.sh --check || { ../disk-guard.sh --clean-idle; ... }`.
+   `../disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --check || { ../disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --clean-idle; ... }`.
    It exits 1 on pressure (free < 40 GB, or combined `target/` > 60 GB).
 2. **`worker-wait-both.sh` runs it on every return** (`--clean-idle`): it
    prints free space + both `target/` sizes, and prunes the larger idle
@@ -393,7 +393,7 @@ full builds + a parallel suite on 4 cores is oversubscription.
 
 **Rule.** In the dual-worker topology the manager runs, on merged `main`:
 1. the FAST gates locally always (fmt, clippy, ceiling, traceability,
-   docs-consistency, `disk-guard.sh --check`);
+   docs-consistency, `disk-guard.sh --wt1 "$WT1" --wt2 "$WT2" --check`);
 2. the heavy suite locally ONLY when no worker is building
    (`pgrep -x cargo/rustc` empty) — otherwise push and let the isolated CI
    matrix be the full-suite judge (it is the receipt of record anyway);

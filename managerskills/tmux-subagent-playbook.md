@@ -5,9 +5,18 @@ It records the architecture, traps, and standing rules for driving worker agents
 
 | File | What |
 |---|---|
-| `worker-wait.sh` | the supervisor (blocking; polls internally; `--selftest` = 5 cases) |
+| `worker-wait.sh` | the supervisor (blocking; polls internally; `--selftest` = 7 cases) |
 | `worker-dispatch-prompt.md.tpl` | the per-cycle dispatch text + completion protocol |
 | `worker-manager-plan.md` | the manager plan: setup, cycle loop, review checklist, disk policy |
+
+---
+
+**Script configuration.** Every script takes its values explicitly — socket,
+session, channel, worktree roots — as flags or env (`TMUX_SOCKET`,
+`TMUX_SESSION*`, `WT1`/`WT2`). None ships a baked default, so nothing here
+assumes a project, host or layout; only the numeric tunables (idle/max
+seconds, disk thresholds) have defaults. `--help` on any script prints its
+full interface; a missing required value exits `4` with that usage.
 
 ---
 
@@ -15,12 +24,12 @@ It records the architecture, traps, and standing rules for driving worker agents
 
 ```
 manager (the pi session you are)                  — writes briefs, dispatches, sleeps, reviews
-tmux -L ${TMUX_SOCKET:-roller-mgr} / session worker-1 — the worker: pi interactive agent in the repo
+tmux -L $TMUX_SOCKET / session worker-1 — the worker: pi interactive agent in the repo
 ```
 
-- **Dedicated socket for management.** Use `${TMUX_SOCKET:-roller-mgr}` for management. Never the default socket (shared machine, the owner runs their own sessions).
+- **Dedicated socket for management.** Use `$TMUX_SOCKET` for management. Never the default socket (shared machine, the owner runs their own sessions).
 - **Completion detection**: the dispatch prompt's completion protocol —
-  the worker runs `tmux -L ${TMUX_SOCKET:-roller-mgr} wait-for -S <channel>` **once, only
+  the worker runs `tmux -L $TMUX_SOCKET wait-for -S <channel>` **once, only
   when genuinely done**. `manager` blocks in `worker-wait.sh`, whose
   primary wait is `tmux wait-for` (kernel-blocked, zero polling).
   The script's internal 5s poll loop covers only failure modes.
@@ -126,7 +135,7 @@ tmux -L ${TMUX_SOCKET:-roller-mgr} / session worker-1 — the worker: pi interac
 
 ## Dual-worker addendum
 
-Two worker panes share `tmux -L ${TMUX_SOCKET:-roller-mgr}`: `worker-1` (primary worktree) and `worker-2` (secondary worktree). Everything above applies per worker; the deltas:
+Two worker panes share `tmux -L $TMUX_SOCKET`: `worker-1` (primary worktree) and `worker-2` (secondary worktree). Everything above applies per worker; the deltas:
 
 1. **Channels are worker-scoped**: `worker-done-w1-<cycle>` /
    `worker-done-w2-<cycle>`. `worker-wait-both.sh` is one blocking call over

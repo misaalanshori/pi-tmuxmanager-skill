@@ -1,4 +1,4 @@
-# Manager session notes — LLMRoller (out of tree)
+# Manager session notes — project log (out of tree)
 
 Running log of standing instructions, owner directives, and findings for this
 management session. Append-only. Read this at the start of every cycle.
@@ -7,7 +7,7 @@ management session. Append-only. Read this at the start of every cycle.
 
 ## 2026-10-27 — Session open
 
-**Topology:** single worker (`tmux -L roller-mgr`, session `worker-1`), main/default
+**Topology:** single worker (`tmux -L agent-mgr`, session `worker-1`), main/default
 branch only — no branches, no worktrees, no merges/rebase. Manager owns `main`;
 worker commits and pushes directly to it. If the worker creates a branch, it is a
 deviation to flag at review.
@@ -53,7 +53,7 @@ Concretely, for this session:
 
 - **224 open issues**, all authored by `misaalanshori`, **0 closed**.
   Numbered 1–224. Body text mirrors `ISSUE-0001`..`ISSUE-0224` from the two
-  audit indexes in `../llmroller_audit_and_remediation_plan/`.
+  audit indexes in `../<project>_audit_and_remediation_plan/`.
 - **CI is RED on `master`** — three consecutive failed runs:
   - `40430914540` (HEAD `ac385e5`) — `test (x86_64-unknown-linux-musl)` fails
   - `40410653618` (`9f14798`) — same leg fails
@@ -688,7 +688,7 @@ the lockout live. That was the worker's own catch, not in the brief.
 ### Filed: #227 — SRDD A4 promises a feature that does not exist
 
 SRDD **A4** and the Section 5 env table promise a built-in `rustls` listener via
-`LLMROLLER_TLS_CERT`/`LLMROLLER_TLS_KEY`. `rg -l 'TlsAcceptor|axum-server' crates/` is **empty**;
+`<APP>_TLS_CERT`/`<APP>_TLS_KEY`. `rg -l 'TlsAcceptor|axum-server' crates/` is **empty**;
 the only `rustls` in the workspace is reqwest's outbound client. The env vars are **silently
 ignored** — the worst failure mode for a security setting, because an ignored TLS option looks
 exactly like a working one.
@@ -943,7 +943,7 @@ sites still fell back to `sha256_hex(master_key)`:
 - `api/common.rs` — `execute_atomic_mutation`
 - `api/sessions_and_traces.rs` — the trace-view audit write
 
-That is not merely "non-HKDF". **`ADR-11` guarantees that rotating `LLMROLLER_MASTER_KEY` does not
+That is not merely "non-HKDF". **`ADR-11` guarantees that rotating `<APP>_MASTER_KEY` does not
 invalidate the audit chain** — that is the whole point of separating instance secrets from the
 rotatable key. A master-key-derived audit key destroys exactly that guarantee, and it does so
 **silently**: after a rotation, old rows simply stop verifying while new rows chain from a different
@@ -1415,7 +1415,7 @@ conversion bug (cf. cycle 27's inert mutant, cycle 33's discarded SQL results).
 - Two aborted waits had left **5 orphaned `tmux wait-for`** processes. Verified empirically that
   `wait-for -S` wakes *every* waiter, so orphans cannot starve the live wait — the selftest now pins that
   property so a future tmux change cannot silently break it.
-- `pgrep -f "tmux -L roller-mgr wait-for"` killed my own shell (exit 143) — the documented `pkill -f` scar,
+- `pgrep -f "tmux -L agent-mgr wait-for"` killed my own shell (exit 143) — the documented `pkill -f` scar,
   repeating with `pgrep`. Use a pattern that cannot match the invoking command line.
 
 ### Session totals
@@ -1545,7 +1545,7 @@ end-to-end readiness is already covered by `test_serve_cli_boots_serves_readyz_a
 
 Cycle 37's JS attribute census and cycle 38's env-var census are the same artefact: **enumerate the claim,
 check it against the code, classify every exception.** The env census found exactly 2 unread of 19
-documented, and correctly separated 5 deployment-artefact names (`LLMROLLER_DOMAIN`, compose port
+documented, and correctly separated 5 deployment-artefact names (`<APP>_DOMAIN`, compose port
 mappings) from binary variables — a distinction a naive grep would have missed and reported as 7 defects.
 
 Two things make such a census worth its cost: the **method** (distinguish "mentioned in a doc comment"
@@ -1908,7 +1908,7 @@ direction would leave half the drift invisible.
 
 Real key: `usage_events_retention_days`. README: `retention_usage_events_days`. Same words, opposite order.
 A user copies the README, sets the variable, and **nothing fails** — the setting is silently ignored. That is
-the same shape as cycle 38's silently-ignored `LLMROLLER_TLS_CERT`, and it is why "the docs are just prose"
+the same shape as cycle 38's silently-ignored `<APP>_TLS_CERT`, and it is why "the docs are just prose"
 underestimates the cost: a wrong key in a settings table is a silent no-op with a UI that looks configured.
 
 ### My own process error, recorded
