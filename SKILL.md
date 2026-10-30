@@ -20,6 +20,17 @@ tmux -L $TMUX_SOCKET / session $TMUX_SESSION     the worker: pi interactive agen
 Everything here is mechanism. Project-specific policy (which model, which crates,
 which gates) belongs in the brief you write for that cycle.
 
+## Start here — read `references/manager-prompt.md` in full
+
+`references/manager-prompt.md` is the authoritative loop spec and the entry point:
+step 0 priming through step 7 close-and-loop, plus the standing invariants. Read it
+end to end before the first dispatch, and re-read it between cycles when a decision
+starts to feel improvised — it is the thing the rest of this pack exists to support.
+
+This `SKILL.md` deliberately does not repeat it. It adds only what the loop spec
+cannot know on its own: which mode you are in, the values you must set before the
+first dispatch, where each supporting document lives, and what to hand the worker.
+
 ## Before the first dispatch
 
 Nothing is baked in: every script takes its values as flags or env and exits `4`
@@ -37,6 +48,37 @@ Also record the worker's **session uuid** after its first turn (not at launch �
 the file may not exist yet, and sampling early once captured the manager's own
 session). `scripts/worker-log.sh` needs it: several sessions share one project
 directory, so "the newest log" is not a safe guess.
+
+## Operating modes
+
+Two things are switchable, and both are **off by default**. Assume the default
+until the operator says otherwise, and say which mode you are in when the session
+starts — most confusion in this pack came from a session inheriting the other
+mode's assumptions.
+
+| | **Default** | Opt-in |
+|---|---|---|
+| Workers | **one** worker (`worker-1`) in a single checkout on the main branch; it commits and pushes straight to it, so there is no merge step | a second worker (`worker-2`) in its own worktree on its own branch, manager merges — `references/manager-dual-worker-prompt.md` |
+| Pricing-window scheduling | **off**: no dispatch is gated by time of day, the worker runs continuously | dispatches to the priced worker gated to `Asia/Jakarta` peak/off-peak windows — `references/manager-deepseek-offpeak-prompt.md` |
+
+In the default mode that means: one `scripts/worker-wait.sh` call per dispatch,
+one completion channel, no `worker-wait-both.sh`, no clock check, no merge or
+rebase, no second worktree on disk.
+
+Turn on a second worker when you have two disjoint batches and are actually
+rate- or token-limited. It buys parallelism and costs an orthogonal partition of
+the work, a merge step, double the `target/` storage, and two context budgets to
+watch. Turn on the off-peak gate when the provider bills by time of day; it buys
+cheaper tokens and costs a mandatory clock check before every dispatch plus a
+worker parked through peak hours — which is slower than running continuously, so
+it is not a default.
+
+The gate only makes sense on a *second* worker. If the operator enables it against
+a single worker, that worker sits parked half the day; say so before doing it.
+
+To switch off again: stop dispatching to the extra worker, record its session uuid,
+kill its session, drop back to the single worker's waits, and stop running the
+clock check.
 
 ## The cycle
 
@@ -117,28 +159,23 @@ tmux sessions. Run it on the target host before trusting the wait.
 | `references/worker-manager-plan.md` | setup and lifecycle: provisioning, priming, context decisions, disk policy, dual-worker partitions |
 | `references/dev-cycle-prompt.md` | the phased TDD loop to append to a brief; placeholder slots are marked |
 | `assets/worker-dispatch-prompt.md.tpl` | the text you paste per cycle; substitute the brief path, the socket and a fresh channel |
-| `references/manager-prompt.md` | stand-alone loop prompt for a manager session that has none of this in context |
+| `references/manager-prompt.md` | **required first read** — the authoritative loop spec: priming, issue queue, brief authoring, dispatch, the blocking wait, review, close-and-loop |
 | `references/manager-init-prompt.md` | bootstrap prompt: orient, verify the worker plane, enter the loop |
-| `references/manager-dual-worker-prompt.md` | converting a single worker setup into two workers in two worktrees |
-| `references/manager-deepseek-offpeak-prompt.md` | gating dispatches to one worker on provider price windows |
+| `references/manager-dual-worker-prompt.md` | **opt-in mode**: converting a single-worker setup into two workers in two worktrees. Off by default |
+| `references/manager-deepseek-offpeak-prompt.md` | **opt-in mode**: gating dispatches to one worker on provider price windows. Off by default |
 | `references/manager-session-notes.md` | worked history (~50 cycles, dated sections): what actually failed and what fixed it. Read the newest sections; jump with `grep -n '^## '`. History, not instructions |
 
 Paths inside the bundled docs are relative to this skill directory (the one
 holding `SKILL.md`). Briefs and cycle reports are not bundled: they belong in the
 workspace beside the target repo, so a worker never commits them.
 
-## Known contradictions in the source material
+## Known inconsistencies in the source material
 
-These predate this reorganization and were left as written rather than silently
-"fixed"; resolve them explicitly per project.
+Left as written rather than silently "fixed". The dual-worker / off-peak ambiguity
+is resolved by "Operating modes" above; these two are project policy, so resolve
+them per project.
 
-1. `manager-deepseek-offpeak-prompt.md` mandates a peak/off-peak dispatch gate,
-   while the playbook records off-peak scheduling as **ignored** by owner
-   directive (both workers run continuously).
-2. Topology: the playbook's last topology section says three worktrees with the
-   manager owning `main`; the newest session notes say single worker, no
-   worktrees, worker pushes `main` directly.
-3. File ceiling: the review bar says 1,100–1,200 lines per file; the enforced gate
-   in the notes' project is 1,600.
-4. Disk floor: the playbook says the guard trips below 40 GB free; `disk-guard.sh`
+1. File ceiling: the review bar says 1,100–1,200 lines per file; the gate enforced
+   in the referenced project is 1,600.
+2. Disk floor: the playbook says the guard trips below 40 GB free; `disk-guard.sh`
    defaults to 25 (`FREE_MIN_GB`).

@@ -9,25 +9,28 @@ cycles of scar tissue.
 - **Topology (fixed)**
 - **The cycle (every dispatch, in order)**
 - **Standing mechanics**
-  - Before any wait: confirm both workers are actually working (owner, 2026-10-22)
+  - Before any wait: confirm the worker is actually working (owner, 2026-10-22)
   - Re-dispatch is part of the merge, not after it (owner correction, 2026-10-21)
   - Every hang-prone command gets a timeout (owner, 2026-10-23)
   - Verify every path in a brief against the tree before dispatching (manager, 2026-10-24)
   - Three tells a worker is wedged, and the one I ignored (owner, 2026-10-23)
 - **Prioritization law (owner, restated 2026-10-21 — read this before any dispatch)**
-- **Dual-worker topology (owner directive, 2026-10-20 — supersedes single-worker §above)**
+- **Dual-worker topology — OPTIONAL, off by default (owner directive, 2026-10-20)**
   - Storage monitoring (owner escalation, 2026-10-20 — two worktrees crashed the machine)
   - Manager gate runs must not overlap a worker build (2026-10-20, dual-worker)
   - Root cause of the disk crisis, fixed in the profiles (2026-10-20)
-  - Pricing-window scheduling — **IGNORED** (owner, 2026-10-21)
+  - Pricing-window scheduling — off by default (owner, 2026-10-21)
   - A byte-comparison gate is not a portable gate (2026-10-21, #427)
   - Provider failure: retry first, switch only if it stays down (owner, 2026-10-21)
   - Worker session recycling, with a helper that lied (2026-10-21)
-  - Three-worktree topology + "manager owns main" (owner, 2026-10-21)
+  - Three-worktree topology + "manager owns main" (two-worker mode, 2026-10-21)
   - Sending a slash command while a worker is mid-turn (2026-10-21)
 
 ## Topology (fixed)
 
+- **Worker count defaults to one.** A second worker is an opt-in mode (see
+  "Operating modes" in `SKILL.md`); read every section below as single-worker
+  unless it says otherwise.
 - Manager: a pi session. Worker: pi in `tmux -L $TMUX_SOCKET`, session
   `worker-1`, cwd = the repo. Separate socket so the management plane never
   collides with other sessions. NEVER the default socket (shared machine).
@@ -155,7 +158,11 @@ cycles of scar tissue.
   scope, risk, review weight) — high-value/low-cost first, epics phased so
   each phase pays back value early. Newest-first is explicitly wrong.
 
-### Before any wait: confirm both workers are actually working (owner, 2026-10-22)
+### Before any wait: confirm the worker is actually working (owner, 2026-10-22)
+
+Written when two workers were running; in the default single-worker mode the same
+rule reduces to step 1: capture the pane, and if its tail already claims
+completion, review instead of waiting.
 
 The race this prevents: a worker finishes and signals **while the manager is
 still composing the wait**. `worker-wait.sh` then attaches after the fact,
@@ -169,12 +176,14 @@ already exists.
 
 **The rule, in order:**
 
-1. Capture both panes (`capture-pane -p -t worker-1`, `-t worker-2`).
+1. Capture the pane(s) (`capture-pane -p -t worker-1`, and `-t worker-2` in
+two-worker mode).
 2. Confirm each footer shows the working state and the expected branch. If
    either is idle — or its pane tail says it finished — **do not wait on it**:
    go straight to review/merge for that worker, dispatch its next batch, then
    wait on the other.
-3. Only when both are genuinely working, call `worker-wait-both.sh`.
+3. Only when both are genuinely working, call `worker-wait-both.sh` (single-worker
+   mode: `worker-wait.sh`).
 
 This is cheap (two captures, ~1 s) and it makes the wait trustworthy: a `rc=1`
 return then really does mean "it went quiet", not "I was late".
@@ -326,7 +335,11 @@ staleness; #282 (enterprise logins cannot complete at all) outranked
 cosmetic TUI rows. The most recently touched issue in the queue (#439, a
 docs/CI publishing task) is correctly sitting below all of them.
 
-## Dual-worker topology (owner directive, 2026-10-20 — supersedes single-worker §above)
+## Dual-worker topology — OPTIONAL, off by default (owner directive, 2026-10-20)
+
+Applies only in the opt-in two-worker mode. It was the operating mode for a stretch
+of the reference project, which is why the scars below read as if it were always on.
+The default remains one worker in one checkout.
 
 Two workers run concurrently on `tmux -L $TMUX_SOCKET`, in separate Git worktrees:
 
@@ -451,14 +464,19 @@ With this in place the operating floor is generous: two cold worktrees ≈
 now only fire on genuinely anomalous growth (a runaway build, leftover
 archives, a third worktree).
 
-### Pricing-window scheduling — **IGNORED** (owner, 2026-10-21)
+### Pricing-window scheduling — off by default (owner, 2026-10-21)
+
+**Default state: off**, so no dispatch is gated by the hour. The gate itself lives in
+`references/manager-deepseek-offpeak-prompt.md`; turn it on only on request, and only
+for the worker it names.
 
 Earlier sessions scheduled dispatches and heavy gate runs inside DeepSeek's
-off-peak pricing window. **That rule is currently ignored by owner directive:**
-both workers run 24/7, and an idle worker is treated as a defect (something to
-dispatch, not something to wait out). Retained here so a future session does
-not rediscover it as "the way we do things"; reactivate only on explicit owner
-instruction.
+off-peak pricing window. **The default is that this rule is off:** workers run
+continuously, and an idle worker is treated as a defect (something to dispatch,
+not something to wait out). Retained here so a future session does not
+rediscover scheduling as "the way we do things"; it becomes active only when the
+off-peak gate is explicitly enabled, and then only for the worker that document
+names.
 
 ### A byte-comparison gate is not a portable gate (2026-10-21, #427)
 
@@ -529,7 +547,7 @@ tail looks frozen and can be mistaken for a stalled worker. After recycling,
 re-derive the uuid from the session header (`head -1 | jq -r .id`) filtered by
 cwd, and never keep tailing the old one.
 
-### Three-worktree topology + "manager owns main" (owner, 2026-10-21)
+### Three-worktree topology + "manager owns main" (two-worker mode, 2026-10-21)
 
 Supersedes the dual-worker section's worktree split. Primary checkout
 is the **manager's** checkout and the only place `main` is checked out; W1 lives

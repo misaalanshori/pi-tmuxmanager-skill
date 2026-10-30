@@ -1,4 +1,12 @@
-Alright, running a single sequential worker is not using our token and rate limits efficiently, so we are upgrading our topology to **two parallel worker agents** operating in separate Git worktrees. Your job is now to set up, prime, dispatch, supervise, review, and merge both workers concurrently while keeping merge conflicts to a minimum by partitioning their tasks across orthogonal parts of the codebase.
+> **Optional mode — OFF by default.**
+> The default topology is one worker in one checkout, committing straight to the
+> main branch: no second worktree, no merge step, no `worker-wait-both.sh`, no
+> partitioned batches. Run this procedure only when the operator explicitly asks
+> for two workers — see "Operating modes" in `SKILL.md`. Step 5 (recording the
+> protocol in the notes) is already done in these bundled documents, so record
+> only what this particular project changes.
+
+Alright, a single sequential worker is not using our token and rate limits efficiently, so we are upgrading our topology to **two parallel worker agents** operating in separate Git worktrees. Your job is now to set up, prime, dispatch, supervise, review, and merge both workers concurrently while keeping merge conflicts to a minimum by partitioning their tasks across orthogonal parts of the codebase.
 
 Execute the following steps immediately and record this new dual-worker protocol in our out-of-tree notes (`references/manager-cycle-playbook.md`, `references/worker-manager-plan.md`, and `references/tmux-subagent-playbook.md`) for future reference:
 

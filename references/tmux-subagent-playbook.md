@@ -133,7 +133,10 @@ tmux -L $TMUX_SOCKET / session worker-1 — the worker: pi interactive agent in 
 - No approval needed mid-cycle; deviations documented in the report.
 - Disk: `cargo clean` at cycle boundaries ONLY (never while a build may run); the wait script prints `df` + `target` size on every return.
 
-## Dual-worker addendum
+## Dual-worker addendum (optional — off by default)
+
+The default is a single worker; this section applies only when a second worker has
+been deliberately provisioned (see "Operating modes" in `SKILL.md`).
 
 Two worker panes share `tmux -L $TMUX_SOCKET`: `worker-1` (primary worktree) and `worker-2` (secondary worktree). Everything above applies per worker; the deltas:
 

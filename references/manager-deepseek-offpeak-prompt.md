@@ -1,6 +1,13 @@
-## DeepSeek Off-Peak Dispatch Gate (Worker 2 ONLY) (Deepseek Off-Peak Rule)
+> **Optional mode — OFF by default.**
+> The default is one worker and no pricing-window gate: nothing is held back
+> because of the hour. Enable this only when the operator explicitly asks for it,
+> and only for the worker it names — see "Operating modes" in `SKILL.md`. While it
+> is off, none of this file applies: no clock check, and no worker parked through
+> peak hours.
 
-To optimize token and pricing limits, Worker 2 (or any worker running DeepSeek) is subject to a strict **Peak / Off-Peak Dispatch Gate** based on `Asia/Jakarta` (WIB, UTC+7) time. Worker 1 is unaffected and runs 24/7.
+## DeepSeek Off-Peak Dispatch Gate (worker 2 only)
+
+Once enabled, the DeepSeek worker is subject to a strict **Peak / Off-Peak Dispatch Gate** based on `Asia/Jakarta` (WIB, UTC+7) time. Any other worker is unaffected and runs continuously.
 
 ### 1. Peak vs. Off-Peak Schedule (`Asia/Jakarta` / WIB)
 * **PEAK HOURS (No new dispatches to Worker 2)**:

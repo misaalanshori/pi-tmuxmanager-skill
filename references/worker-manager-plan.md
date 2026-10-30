@@ -8,7 +8,7 @@ This plan describes how the Manager Agent dispatches and supervises pi worker ag
 |---|---|---|
 | manager (me) | this session | writes briefs, dispatches, sleeps in `worker-wait.sh`, reviews, merges |
 | Worker 1 | `tmux -L $TMUX_SOCKET`, session `worker-1`, cwd = primary or wt1 | pi interactive TUI |
-| Worker 2 | `tmux -L $TMUX_SOCKET`, session `worker-2`, cwd = wt2 | pi interactive TUI (dual-worker mode) |
+| Worker 2 | `tmux -L $TMUX_SOCKET`, session `worker-2`, cwd = wt2 | pi interactive TUI — **only in dual-worker mode, off by default** |
 
 A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane so that worker sessions never collide with any other tmux sessions on the machine.
 
@@ -54,16 +54,20 @@ A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane s
 - `worker-wait.sh` prints `df` and target sizes on every return.
 - **Prune only at cycle boundaries** (never while a build is in progress): before each dispatch, if `target/` > 25 GB or free disk < 25 GB, run `cargo clean`.
 
-## 6. Dual-Worker Topology
+## 6. Dual-Worker Topology (optional — off by default)
 
-When running two concurrent workers:
+The default is the single-worker topology in §1. When the operator asks for two
+concurrent workers:
 - **Topology**: Worker 1 (`worker-1`) in worktree 1; Worker 2 (`worker-2`) in worktree 2, both on `tmux -L $TMUX_SOCKET`.
 - **Priming**: Worker 2 gets the two mandatory priming prompts in order, exactly like Worker 1.
 - **Channels**: `worker-done-w1-<cycle>` / `worker-done-w2-<cycle>`; fix-ups `...fix`. `worker-wait-both.sh` blocks on both.
 - **Batch partition**: Orthogonal batches by crate / subsystem to minimize merge friction.
 - **Branches**: Neither worker pushes to `main` directly. Workers commit to `worker-1/<batch>` and `worker-2/<batch>`. The manager merges into `main`, resolves shared-file conflicts (`Cargo.lock`, `CHANGELOG.md`), runs all gates, pushes, and rebases worktrees at cycle boundaries.
 
-## 7. Worktree Rules (Manager Owns Main)
+## 7. Worktree Rules (two-worker mode)
+
+In the default single-worker mode there are no branches at all: the worker commits
+and pushes to `main` directly. These rules apply once two workers share a repo.
 
 1. **Only the manager touches `main`.** Workers commit strictly to their own branch.
 2. Each worker operates strictly within its own worktree directory.
