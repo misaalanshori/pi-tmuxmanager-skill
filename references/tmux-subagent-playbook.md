@@ -57,7 +57,7 @@ tmux -L $TMUX_SOCKET / session worker-1 — the worker: pi interactive agent in 
    prompt. Exit with `Ctrl+D`; pi prints `To resume this session: pi
    --session <uuid>` — record the uuid for rescues.
 5. **Provider-qualified model ids.** `--model deepseek-v4.1-flash` is
-   ambiguous across multiple providers; use qualified names like `opendesign/<model>`. Also:
+   ambiguous across multiple providers; use qualified names like `<provider>/<model>`. Also:
    the tmux server inherits **your** environment (`PI_PROVIDER`, proxy
    vars, …) — remember the worker sees it too.
 6. **API 400s under big contexts** happen under heavy contexts.

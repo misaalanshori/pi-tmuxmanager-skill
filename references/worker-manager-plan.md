@@ -16,7 +16,7 @@ A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane s
 
 1. `tmux -L $TMUX_SOCKET new-session -d -s worker-1 -c /path/to/repo 'bash --norc'`
 2. Start pi with the designated model:
-   `pi --model antigravity/gemini-3.8-flash --models "antigravity/gemini-3.8-flash,opencode-go/mimo-v2.6-flash"`
+   `pi --model <provider>/<model> --models "<provider>/<model>,<provider>/<fallback>"`
    Verify the footer in the pane.
 3. Prime (the exact two prompts in order, waiting for each to finish before the next):
    a. "Read the README and the ./docs, no need to read the code yet. just explain to me as if im a minimally-technical stakeholder"

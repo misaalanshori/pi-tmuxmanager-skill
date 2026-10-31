@@ -46,7 +46,7 @@ cycles of scar tissue.
 ## The cycle (every dispatch, in order)
 
 1. **Read the issue live** (`gh issue view <n> --comments`): body +
-   FULL thread + author check (misaalanshori only). Never brief from a
+   FULL thread + author check (`$OWNER_LOGIN` only). Never brief from a
    stale copy.
 2. **RCA yourself first.** Read the code the issue names; verify the
    mechanism; make the design calls (scope, divergences, what is
@@ -84,7 +84,7 @@ cycles of scar tissue.
 9. **Comment + close** with evidence (commits, guards, receipts, CI
    run ids, deviations). Check for late owner comments FIRST.
 10. **Loop immediately to Step 1.** NEVER return the turn to the user or
-    ask for confirmation. As long as open issues authored by `misaalanshori`
+    ask for confirmation. As long as open issues authored by `$OWNER_LOGIN`
     exist, loop continuously and autonomously. Only stop when the issue list
     is completely cleared.
 
@@ -355,9 +355,10 @@ W1 and W2 session UUIDs are recorded at launch; Manager sessions are the remaini
 **Model law.** Both workers run the configured model.
 
 **Orthogonal batching (conflict minimization).** Each cycle assigns two
-disjoint batches by crate: W1 = surface crates (`crates/proxy`, `crates/admin`,
-`crates/server`, integration tests); W2 = core/data crates (`crates/core`,
-`crates/proto`, `crates/store`). Shared files (`Cargo.lock`, `CHANGELOG.md`,
+disjoint batches by crate *role*: W1 = the surface/HTTP layer (in one project
+`proxy`, `admin`, `server`, plus integration tests); W2 = core/data (`core`,
+`proto`, `store`). Name the real crates in the brief — the roles are what keep
+the batches orthogonal; the crate names are just today's example. Shared files (`Cargo.lock`, `CHANGELOG.md`,
 `docs/*`) are the only expected conflict surface: both briefs say
 "touch only your section of CHANGELOG; never reformat", and the manager
 resolves any conflict at merge. Prioritization:
@@ -381,7 +382,7 @@ rc carries which one). Re-waits reuse the same channel per still-running
 worker. At every return, `worker-log.sh -n 40` BOTH uuids.
 
 **Disk hygiene (two worktrees).** At every cycle boundary check
-`df -h /home/debian` + `du -sh` of target directories. `cargo clean` the idle
+`df -h "$DISK_PATH"` + `du -sh` of target directories. `cargo clean` the idle
 worktree's `target/` when the combined size exceeds ~25-30 GB or free drops
 below 25 GB — ONLY when that worker is idle at a boundary, never mid-build.
 
@@ -410,7 +411,7 @@ apart. Monitoring at wait-returns alone was not enough. The binding rules:
 
 **Storage pressure returns the wait itself (owner request, 2026-10-20).**
 `worker-wait.sh` gained a fifth exit code — `5` — and a `disk(<free>GB)`
-reason: its 5 s poller also reads free space on `/home/debian`, and below
+reason: its 5 s poller also reads free space on `$DISK_PATH`, and below
 `DISK_MIN_GB` (default **25 GB**) it returns immediately instead of sleeping
 to a worker deadline. `worker-wait-both.sh` races the same check at wrapper
 level and additionally prints `disk-guard.sh`'s numbers on the way out.
@@ -521,14 +522,14 @@ order:
 2. **Retry a few more times over a bounded window** (a few attempts, not one).
    Only a failure that survives that window counts as "down".
 3. **Only then switch the provider**, and switch **cheap first**: the
-   `--models` cycle order decides the cost. `antigravity/gemini-3.8-flash` is
-   **NOT a cheap model** — it is subscription-billed and the most expensive
-   option in the list; `opendesign/mimo-v2.6-flash` is the cheap fallback, and
-   `deepseek-v4.1-flash` is the default that is retried before anything else.
+   `--models` cycle order decides the cost, so know what each entry bills as.
+   A subscription-billed model is **not** a cheap model however fast its name
+   sounds; put the genuinely cheap fallback last-but-one and keep the healthy
+   default first, so a retry never lands on the expensive option.
 4. **Switch back as soon as the default is healthy** — a worker left on the
    fallback silently spends the wrong budget.
 
-The failure mode this rule prevents: treating one 503 as "deepseek is down
+The failure mode this rule prevents: treating one 503 as "the default model is down
 forever", flipping both workers to gemini (the expensive option), and leaving
 them there. That happened this cycle; the owner's instruction is that retrying
 is the first move and a switch is the last resort, cheap-model-only.

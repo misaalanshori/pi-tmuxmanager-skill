@@ -5,11 +5,15 @@
 > is off, none of this file applies: no clock check, and no worker parked through
 > peak hours.
 
-## DeepSeek Off-Peak Dispatch Gate (worker 2 only)
+## Off-Peak Dispatch Gate (worker 2 only, opt-in)
 
-Once enabled, the DeepSeek worker is subject to a strict **Peak / Off-Peak Dispatch Gate** based on `Asia/Jakarta` (WIB, UTC+7) time. Any other worker is unaffected and runs continuously.
+Once enabled, the priced worker is subject to a strict **Peak / Off-Peak Dispatch Gate** in the timezone you set as `$PRICE_TZ`. Any other worker is unaffected and runs continuously.
 
-### 1. Peak vs. Off-Peak Schedule (`Asia/Jakarta` / WIB)
+### 1. Peak vs. off-peak schedule
+
+The windows below are the example this gate was written for (`$PRICE_TZ=Asia/Jakarta`,
+WIB, UTC+7). Take the real ones from the provider's current price table — they change.
+
 * **PEAK HOURS (No new dispatches to Worker 2)**:
   * **Monday – Friday**: `08:00 – 10:59 WIB` and `13:00 – 16:59 WIB`
 * **OFF-PEAK HOURS (Full dispatch enabled for Worker 2)**:
@@ -20,7 +24,7 @@ Once enabled, the DeepSeek worker is subject to a strict **Peak / Off-Peak Dispa
 Never eyeball the clock. After every `worker-wait.sh` return and immediately before dispatching any new brief or fix-up to Worker 2, run this exact shell check:
 
 ```bash
-TZ=Asia/Jakarta date '+%u %H%M %a %Y-%m-%d %H:%M:%S %Z' | awk '{
+TZ=$PRICE_TZ date '+%u %H%M %a %Y-%m-%d %H:%M:%S %Z' | awk '{
   dow=$1; hm=$2+0;
   if (dow <= 5 && ((hm >= 800 && hm < 1100) || (hm >= 1300 && hm < 1700)))
     print "STATUS: PEAK — DO NOT DISPATCH worker-2 (" $0 ")";

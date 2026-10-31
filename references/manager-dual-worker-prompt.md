@@ -20,7 +20,7 @@ Execute the following steps immediately and record this new dual-worker protocol
 
 
 * **Model Launch**: Launch `pi` in `worker-2` using the exact same primary and fallback model configuration as `worker-1`:
-`pi --model antigravity/gemini-3.8-flash --models "antigravity/gemini-3.8-flash,opencode-go/mimo-v2.6-flash"`
+`pi --model <provider>/<model> --models "<provider>/<model>,<provider>/<fallback>"`
 Verify the footer in the pane to confirm the model loaded properly.
 
 
@@ -36,7 +36,7 @@ Verify the footer in the pane to confirm the model loaded properly.
 
 #### 2. Orthogonal Issue Batching & Conflict-Free Briefing
 
-* **Partition by Crate/Subsystem**: When pulling open issues (`gh issue list` / `gh issue view <n> --comments` with `.author.login == "misaalanshori"` verified), select two batches that touch **completely disjoint areas** of the workspace:
+* **Partition by Crate/Subsystem**: When pulling open issues (`gh issue list` / `gh issue view <n> --comments` with `.author.login == "$OWNER_LOGIN"` verified), select two batches that touch **completely disjoint areas** of the workspace:
 * *Example Partition*: Assign Worker 1 (`worker-1`) issues in frontend/surface crates (e.g. `crates/proxy`, `crates/admin`, `crates/server`), and assign Worker 2 (`worker-2`) issues in core/data crates (e.g. `crates/core`, `crates/proto`, `crates/store`).
 
 

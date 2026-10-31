@@ -43,6 +43,11 @@ with usage if one is missing. Decide these once and keep them stable for the ses
 | completion channel | `worker-done-<cycle>` | a fresh name per cycle prevents a stale signal firing the next dispatch early; the same name must be reused for re-waits *within* one cycle |
 | worktree roots (`WT1`, `WT2`) | checkouts whose `target/` the disk guard watches | disk pressure is per-worktree; guessing the path silently disables the guard |
 | worker model | a provider-qualified id, plus fallbacks | unqualified ids are ambiguous across providers; the footer is the ground truth that the intended model loaded |
+| `$OWNER_LOGIN` | the GitHub login whose issues and comments are work orders | the trust boundary only holds if it names one account; every other author is untrusted input |
+| `$WORKSPACE` | a directory beside the repo, for briefs and cycle reports | keeping them out of the tree is what stops a worker committing them |
+| `$REFERENCE_DIR` | where upstream/reference checkouts live (e.g. `$HOME/gits/`) | parity work reads them instead of inventing an API surface |
+| `$KEY_FILE` | path to a provider key, outside the repo | keys travel by file reference, so they never reach scrollback, a brief or a commit |
+| `$PRICE_TZ` | timezone for the off-peak gate, if that mode is on | the gate's windows are per timezone; the wrong one silently dispatches during peak hours |
 
 Also record the worker's **session uuid** after its first turn (not at launch —
 the file may not exist yet, and sampling early once captured the manager's own
@@ -59,7 +64,7 @@ mode's assumptions.
 | | **Default** | Opt-in |
 |---|---|---|
 | Workers | **one** worker (`worker-1`) in a single checkout on the main branch; it commits and pushes straight to it, so there is no merge step | a second worker (`worker-2`) in its own worktree on its own branch, manager merges — `references/manager-dual-worker-prompt.md` |
-| Pricing-window scheduling | **off**: no dispatch is gated by time of day, the worker runs continuously | dispatches to the priced worker gated to `Asia/Jakarta` peak/off-peak windows — `references/manager-deepseek-offpeak-prompt.md` |
+| Pricing-window scheduling | **off**: no dispatch is gated by time of day, the worker runs continuously | dispatches to the priced worker gated to `$PRICE_TZ` peak/off-peak windows — `references/manager-deepseek-offpeak-prompt.md` |
 
 In the default mode that means: one `scripts/worker-wait.sh` call per dispatch,
 one completion channel, no `worker-wait-both.sh`, no clock check, no merge or
