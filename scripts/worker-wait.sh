@@ -45,8 +45,8 @@ Required (a flag wins; the env var is the fallback; there are no baked defaults)
   --channel CHAN    completion channel for this cycle        (none: fresh per cycle)
 
 Options:
-  --idle-secs N     silence before rc 1                      (default 120)
-  --max-secs N      total wait budget before rc 2            (default 3600)
+  --idle-secs N     silence before rc 1, keep near 120       (default 120)
+  --max-secs N      total wait budget before rc 2, ~1 hour   (default 3600)
   --quiet           suppress the pane + disk report
   --selftest        run the built-in supervisor tests
   -h, --help        this help

@@ -23,7 +23,7 @@ S2="${TMUX_SESSION2:-}"
 WT1="${WT1:-}"
 WT2="${WT2:-}"
 CH1=""; CH2=""
-IDLE=120; MAX=5400
+IDLE=120; MAX=3600
 DISK_PATH="${DISK_PATH:-.}"   # filesystem to watch; default is "wherever I run"
 
 usage() {
@@ -44,7 +44,7 @@ Required (a flag wins; the env var is the fallback; there are no baked defaults)
 
 Options:
   --idle-secs N     silence before rc 1                  (default 120)
-  --max-secs N      total wait budget before rc 2        (default 5400)
+  --max-secs N      total wait budget before rc 2        (default 3600, ~1 hour)
   -h, --help        this help
 
 Disk pressure is measured on $DISK_PATH (default ".").

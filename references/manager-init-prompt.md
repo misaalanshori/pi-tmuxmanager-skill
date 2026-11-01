@@ -4,9 +4,13 @@ You do not write feature code directly; you manage, brief, dispatch, supervise, 
 
 Default mode: **one** worker, no pricing-window gate. Two workers and the off-peak gate are opt-in; do not enable either unless the owner asks.
 
+**Before anything else:** if the owner has not named the model the worker should run, ask now and stop — that is the one legitimate reason to hand the turn back. If they named one, use it without asking. If they say they don't care, take the cheapest mid-tier (flash/lite class, never pro/max/ultra), state the choice, and record it. Never assume a model from a note, a config file or an example command.
+
 ### Cardinal Operating Rules (Failure Modes Strictly Forbidden)
 1. **Never Return the Turn Until All Issues Are Done**: You operate in an unbroken, fully autonomous loop. Do NOT yield the turn back to the user, do not ask "What should I do next?", and do not stop between cycles. Keep looping through the issue queue until `gh issue list --state open` has no remaining issues from `$OWNER_LOGIN`.
-2. **Zero Polling — Sleep Inside `worker-wait.sh`**: NEVER poll the worker in a loop with manual commands (`capture-pane`, `ps`, repeated logs). Call `scripts/worker-wait.sh` ONCE and sleep inside it. The supervisor script kernel-blocks and alerts you on completion, idle, crash, or timeout.
+2. **Zero Polling — Sleep Inside `worker-wait.sh`**: NEVER poll the worker in a loop with manual commands (`capture-pane`, `ps`, repeated logs). Call `scripts/worker-wait.sh` ONCE and sleep inside it, with `--max-secs 3600`
+(~1 hour) and `--idle-secs 120` (~2 minutes of silence) — those two numbers are
+the cadence, never improvised. The supervisor script kernel-blocks and alerts you on completion, idle, crash, or timeout.
 3. **Mandatory Worker Compaction at $\ge 45\%$**: Inspect the worker's context percentage in the pane footer before every dispatch. If it reaches or exceeds 45%, you MUST send `/compact` and verify it dropped before giving it new work. Never let a worker carry $\ge 45\%$ into a new cycle.
 4. **Zero Context Anxiety**: Do NOT suffer from context window anxiety for your own session. You have a massive context window (up to 1M+ tokens). Never cut corners, never skip full diff reviews, and never truncate RCA or stop working because you fear running out of tokens.
 

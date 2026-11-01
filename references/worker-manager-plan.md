@@ -15,7 +15,11 @@ A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane s
 ## 2. Setup protocol
 
 1. `tmux -L $TMUX_SOCKET new-session -d -s worker-1 -c /path/to/repo 'bash --norc'`
-2. Start pi with the designated model:
+2. Start pi with the model **the owner named**. If the owner has not named one, ask
+   before launching — do not assume one, and do not lift one out of an example in
+   these docs. If the owner says they don't care, take the cheapest mid-tier model
+   (flash/lite/mini class, never pro/max/ultra; the cheap variant when a family ships
+   both) and say which one you took.
    `pi --model <provider>/<model> --models "<provider>/<model>,<provider>/<fallback>"`
    Verify the footer in the pane.
 3. Prime (the exact two prompts in order, waiting for each to finish before the next):
@@ -27,7 +31,7 @@ A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane s
 
 1. **Brief**: Write the cycle's prompt file (e.g. `PROMPT-<ID>-<date>.md`) with full RCA, exact design, TDD requirements, and acceptance criteria.
 2. **Dispatch**: Substitute `${prompt_path}` and a fresh `${done_channel}` (e.g. `worker-done-1`) into `worker-dispatch-prompt.md.tpl`, and deliver it into the pane via `tmux load-buffer` + `paste-buffer -p`.
-3. **Supervise**: `./worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel worker-done-1 --max-secs 3600`
+3. **Supervise**: `./worker-wait.sh --socket "$TMUX_SOCKET" --session "$TMUX_SESSION" --channel worker-done-1 --idle-secs 120 --max-secs 3600`
    — one blocking call; the manager sleeps inside it. **Re-waits within the same cycle MUST reuse the same channel**.
    Exit codes:
    | rc | meaning | manager action |
@@ -39,7 +43,13 @@ A dedicated, isolated socket (`$TMUX_SOCKET`) is used for the management plane s
    | 4 | setup error | missing session or socket |
    | 5 | disk pressure | free space fell below minimum threshold; clean target dirs |
 4. **Continue vs compact**: After each cycle, read the context % from the pane footer. **< 45% → dispatch the next cycle immediately. ≥ 45% → `/compact` first** (wait for completion and verify context dropped; if degraded, start a fresh primed session per §2). Never allow a worker to carry $\ge 45\%$ into a new cycle.
-5. **Continuous autonomous loop**: Never return the turn to the human operator between cycles or issues. The manager immediately loops to §3.1 for the next open issue until all issues are completed. Do not poll the worker during execution; sleep inside `worker-wait.sh`. The manager has plenty of context tokens and must not suffer from context anxiety.
+5. **Polling cadence**: one blocking wait per dispatch, `--max-secs 3600` (~1 hour)
+   and `--idle-secs 120` (~2 minutes of silence → rc 1). A deadline return is a
+   normal check-in — peek, judge, re-wait with the same channel. Never shorten the
+   max to check sooner; keep the idle window near 120s (lower reads a thinking
+   worker as stuck, higher lets a wedge run an hour); raise the max only for a phase
+   known to run longer, and say why.
+6. **Continuous autonomous loop**: Never return the turn to the human operator between cycles or issues. The manager immediately loops to §3.1 for the next open issue until all issues are completed. Do not poll the worker during execution; sleep inside `worker-wait.sh`. The manager has plenty of context tokens and must not suffer from context anxiety.
 
 ## 4. Review on completion (Strict TDD & Quality Audit)
 
